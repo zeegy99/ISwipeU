@@ -2,19 +2,29 @@ from flask import Flask, request, jsonify, session, make_response, redirect
 from flask_cors import CORS
 from dotenv import load_dotenv
 import mysql.connector
+import boto3
+
+import hashlib
 
 
 import psycopg2
 import secrets, datetime
 import bcrypt
+
 import os, smtplib, ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import hashlib
-import boto3
+
+import psycopg2
+
 
 print("at the start of the main backend")
 load_dotenv()
+
+def hash_function(curr_pass):
+    combined = curr_pass.encode()
+    a = bcrypt.hashpw(combined, bcrypt.gensalt()) 
+    return (a.decode())
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173"]}}, 
@@ -22,6 +32,8 @@ CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173"]}},
 
 password = os.getenv("MySQL_Password")
 conn = None
+
+
 try:
     conn = mysql.connector.connect(
         host='mealswipe-backend-db.cupg6kqiyitn.us-east-1.rds.amazonaws.com',
@@ -42,7 +54,7 @@ except Exception as e:
 finally:
     if conn:
         conn.close()
-print("out")
+
 
 #API routing
 @app.route("/api/asdf")
@@ -84,5 +96,96 @@ def take_off_waitlist():
     waitlist_data.pop(int(data))
     print("This is the new popped waitlist", waitlist_data)
     return waitlist_data
+
+@app.route("/api/signup_info", methods=["POST", "OPTIONS"])
+def login_info():
+    if request.method == "OPTIONS":
+        return '', 200
+    
+    data = request.get_json()
+        
+    try:
+        conn = mysql.connector.connect(
+            host='mealswipe-backend-db.cupg6kqiyitn.us-east-1.rds.amazonaws.com',
+            port=3306,
+            database='dev',
+            user='admin',
+            password=password,
+            ssl_disabled=False,
+        ssl_ca='/certs/global-bundle.pem'
+        )
+        cursor = conn.cursor()
+        # cursor.execute("CREATE TABLE login_info (" \
+        # "Username VARCHAR(100) NOT NULL PRIMARY KEY," \
+        # "Email VARCHAR(100)," \
+        # "PASSWORD VARCHAR(100))")
+   
+
+        cursor.execute("INSERT INTO login_info (Username, Email, PASSWORD) VALUES "
+        "(%s, %s, %s)", (data.get("username"), data.get("email"), hash_function(data.get("password"))))
+
+
+        cursor.execute("SELECT * FROM login_info")
+        rows = cursor.fetchall()
+        for row in rows:
+            print(row)
+
+        conn.commit()
+
+    except Exception as e:
+        print(f"Database error: {e}")
+        raise
+    finally:
+        if conn:
+            conn.close()
+
+    print("This is data", data)
+    return "<p> Signup info received </p>"
+
+
+@app.route("/api/login", methods=["POST", "OPTIONS"])
+def login():
+    if request.method == "OPTIONS":
+        return '', 200
+    
+    data = request.get_json()
+        
+    try:
+        conn = mysql.connector.connect(
+            host='mealswipe-backend-db.cupg6kqiyitn.us-east-1.rds.amazonaws.com',
+            port=3306,
+            database='dev',
+            user='admin',
+            password=password,
+            ssl_disabled=False,
+        ssl_ca='/certs/global-bundle.pem'
+        )
+        cursor = conn.cursor()
+
+
+        cursor.execute("""
+            SELECT PASSWORD FROM login_info WHERE Username = %s
+        """, (data['username'],))
+        row = cursor.fetchone()
+        if row:
+            print("This is row", row)
+            stored_hash = row[0]
+
+            is_valid = bcrypt.checkpw(data['password'].encode(), stored_hash.encode())
+            print("Password Match:", is_valid)
+            return (is_valid)
+        else:
+            print("Not found")
+
+       
+    except Exception as e:
+        print(f"Database error: {e}")
+        raise
+    finally:
+        if conn:
+            conn.close()
+
+    print("This is data", data)
+    return "<p> Signup info received </p>"
 
 app.run(port=5000, debug=True)

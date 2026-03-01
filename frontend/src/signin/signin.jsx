@@ -1,6 +1,7 @@
 import { useState, react } from 'react'
 import './signin.css'
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 function Signin() {
 
@@ -9,10 +10,25 @@ function Signin() {
 
   const navigate = useNavigate();
 
+  const send_login_info = async () => {
+    
+  }
 
-  const handleSignin = (e) => {
+
+  const handleSignin = async (e) => {
     e.preventDefault();
-    console.log("handlesignin ran")
+   
+    const response = await fetch("http://localhost:5000/api/login", {
+      method: "POST",
+      headers: {"Content-type": "application/json"},
+      body: JSON.stringify({username, password})
+    })
+
+    if (response.ok) {
+      console.log("yay")
+      return 
+    }
+    return -1
   };
 
   return (
@@ -49,7 +65,7 @@ function Signin() {
       </form>
 
       <div className="signup-link">
-        {/* Need an account? <Link to="/signup">Sign Up</Link> */}
+        Need an account? <Link to="/signup">Sign Up</Link>
       </div>
     </div>
   </div>
