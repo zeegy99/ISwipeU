@@ -38,6 +38,22 @@ function Homepage() {
     }
   }
 
+  const send_session = async () => {
+    const response = await fetch("http://localhost:5000/api/session", {
+      method: "POST", 
+      credentials: 'include',
+      headers: { "Content-Type": "application/json" },
+    })
+
+    if (!response.ok) {
+      throw new Error('Response Status: ', response.status)
+    }
+    const data = await res.json();
+    console.log("yay")
+    console.log(data)
+    return -1
+  }
+
 
 
   const pickup_orders = async () => {
@@ -135,6 +151,7 @@ function Homepage() {
         <button onClick={take_off_waitlist}> Pickup Orders</button>
         <button onClick={test_backend}> Test </button>
         <button onClick={send_location}> Send Location</button>
+        <button onClick={send_session}> Session</button>
         <Location/>
         </>
       )

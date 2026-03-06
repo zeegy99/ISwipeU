@@ -187,5 +187,36 @@ def login():
 
     print("This is data", data)
     return "<p> Signup info received </p>"
+ 
+@app.route("/api/session", methods=["GET", "OPTIONS"])
+def session():
+
+    if request.method == "OPTIONS":
+        return '', 200
+
+    data = request.get_json()
+        
+    try:
+        conn = mysql.connector.connect(
+            host='mealswipe-backend-db.cupg6kqiyitn.us-east-1.rds.amazonaws.com',
+            port=3306,
+            database='dev',
+            user='admin',
+            password=password,
+            ssl_disabled=False,
+        ssl_ca='/certs/global-bundle.pem'
+        )
+        cursor = conn.cursor(dictionary=True)  # returns rows as dicts
+        cursor.execute("SELECT * FROM session")
+        rows = cursor.fetchall()
+        print(rows)
+        return jsonify(rows), 200
+    except Exception as e:
+        print(f"Database error: {e}")
+        raise
+    finally:
+        if conn:
+            conn.close()
+
 
 app.run(port=5000, debug=True)
