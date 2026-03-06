@@ -4,10 +4,15 @@ from dotenv import load_dotenv
 import mysql.connector
 import boto3
 
+import stripe 
+
 import hashlib
 
 
-import psycopg2
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+
 import secrets, datetime
 import bcrypt
 
@@ -15,7 +20,7 @@ import os, smtplib, ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-import psycopg2
+
 
 
 print("at the start of the main backend")
@@ -31,6 +36,7 @@ CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173"]}},
      supports_credentials=True, allow_headers=["Content-Type"], methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]) 
 
 password = os.getenv("MySQL_Password")
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 conn = None
 
 
@@ -189,7 +195,7 @@ def login():
     return "<p> Signup info received </p>"
  
 @app.route("/api/session", methods=["GET", "OPTIONS"])
-def session():
+def get_session():
 
     if request.method == "OPTIONS":
         return '', 200
