@@ -4,7 +4,7 @@ import Location from './location';
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-function Swiping() {
+function Swiper() {
 
   const [name, setName] = useState("");
   const [waitlist, setWaitlist] = useState([]);
@@ -19,22 +19,32 @@ function Swiping() {
     });
     const data = await res.json();
     if (data.logged_in) {
-      console.log("username:", data.username);
-      setName(data.username); 
+      setName(data.username);
     }
   };
+
+  const fetchWaitlist = async () => {
+    const res = await fetch("http://localhost:5000/api/get_waitlist", {
+      credentials: "include",
+    });
+    const data = await res.json();
+    setWaitlist(data); // data is [{ id, Username, Email, created_at }, ...]
+  };
+
   checkSession();
+  fetchWaitlist();
 }, []);
+
+
   
   
 
-  const add_waitlist = () => {
+  const add_waitlist = async () => {
     if (name === "") {
       console.log("No name, returning -1")
       return -1
     }
-    setWaitlist([...waitlist, name])
-    send_waitlist()
+    await send_waitlist();
   }
 
   const change_role = () => {
@@ -95,38 +105,38 @@ function Swiping() {
     const response = await fetch("http://localhost:5000/api/waitlist", {
       method: "POST", 
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(name)
+      body: JSON.stringify({ username: name, email: "" })
     })
 
     if (!response.ok) {
       throw new Error('Response Status: ', response.status)
     }
 
-    const data = await response.text()
-    console.log(data)
+    const res = await fetch("http://localhost:5000/api/get_waitlist", { credentials: "include" });
+    const data = await res.json();
+    console.log("data: ", data)
+    setWaitlist(data);
   }
 
   const take_off_waitlist = async () => {
-    if (index >= waitlist.length) {
-      console.log("Invalid Index")
-      return -1 
-    }
-    const response = await fetch("http://localhost:5000/api/take_off_waitlist", {
-      method: "POST", 
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(index)
-    })
-
-    if (!response.ok) {
-      throw new Error('Response Status: ', response.status)
-    }
-
-    const data = await response.json()
-    console.log(data)
-    console.log(typeof(data))
-    // console.log(typeof(data.json()))
-    setWaitlist(data)
+  if (index >= waitlist.length) {
+    console.log("Invalid Index");
+    return -1;
   }
+
+  const entry = waitlist[index]; // get the actual entry with its DB id
+
+  const response = await fetch("http://localhost:5000/api/take_off_waitlist", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: entry.id }) // send DB id, not array index
+  });
+
+  // Refresh waitlist from DB after removing
+  const res = await fetch("http://localhost:5000/api/get_waitlist", { credentials: "include" });
+  const data = await res.json();
+  setWaitlist(data);
+};
 
   const test_backend = async () => {
     const response = await fetch ("http://localhost:5000/api/asdf")
@@ -176,10 +186,10 @@ function Swiping() {
         </>
       )
       }
-      <p> Current Waitlist: {waitlist.join(", ")} </p>
+      <p> Current Waitlist: {waitlist.map(w => w.Username).join(", ")} </p>
     </>
     
   )
 }
 
-export default Swiping
+export default Swiper

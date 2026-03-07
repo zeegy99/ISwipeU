@@ -92,12 +92,53 @@ def waitlist():
     
     data = request.get_json()
     
-    print("This is data", data)
-    # print(type(waitlist))
-    waitlist_data.append(data)
-    print("This is waitlist", waitlist_data)
-    return "<p> Waitlist Received </p>"
+    try:
+        conn = mysql.connector.connect(
+            host='mealswipe-backend-db.cupg6kqiyitn.us-east-1.rds.amazonaws.com',
+            port=3306,
+            database='dev',
+            user='admin',
+            password=password,
+            ssl_disabled=False,
+        ssl_ca='/certs/global-bundle.pem'
+        )
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO waitlist (Username) VALUES (%s)",
+            (data.get("username"),)
+        )
+        conn.commit()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
+@app.route("/api/get_waitlist", methods=["GET", "OPTIONS"])
+def get_waitlist():
+    if request.method == "OPTIONS":
+        return '', 200
+
+    try:
+        conn = mysql.connector.connect(
+            host='mealswipe-backend-db.cupg6kqiyitn.us-east-1.rds.amazonaws.com',
+            port=3306,
+            database='dev',
+            user='admin',
+            password=password,
+            ssl_disabled=False,
+        ssl_ca='/certs/global-bundle.pem'
+        )
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM waitlist ORDER BY created_at ASC")
+        rows = cursor.fetchall()
+        return jsonify(rows), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 @app.route("/api/take_off_waitlist", methods=["POST", "OPTIONS"])
 def take_off_waitlist():
     if request.method == "OPTIONS":
@@ -105,10 +146,25 @@ def take_off_waitlist():
     
     data = request.get_json()
     
-    print("This is data", data)
-    waitlist_data.pop(int(data))
-    print("This is the new popped waitlist", waitlist_data)
-    return waitlist_data
+    try:
+        conn = mysql.connector.connect(
+            host='mealswipe-backend-db.cupg6kqiyitn.us-east-1.rds.amazonaws.com',
+            port=3306,
+            database='dev',
+            user='admin',
+            password=password,
+            ssl_disabled=False,
+        ssl_ca='/certs/global-bundle.pem'
+        )
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM waitlist WHERE id = %s", (data.get("id"),))
+        conn.commit()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 @app.route("/api/signup_info", methods=["POST", "OPTIONS"])
 def login_info():

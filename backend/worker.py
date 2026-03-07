@@ -18,10 +18,11 @@ conn = mysql.connector.connect(
 
 
 cursor = conn.cursor()
-cursor.execute("""CREATE TABLE user_roles (
-    Username VARCHAR(100) NOT NULL PRIMARY KEY,
-    Role ENUM('admin', 'guest', 'swiper') NOT NULL DEFAULT 'swiper',
-    FOREIGN KEY (Username) REFERENCES login_info(Username) ON DELETE CASCADE
+cursor.execute("""CREATE TABLE waitlist (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    Username VARCHAR(100) NOT NULL,
+    Email VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );""")
 
 conn.commit()  
