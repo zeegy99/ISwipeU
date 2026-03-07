@@ -3,20 +3,24 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 import mysql.connector
 import boto3
+import os, smtplib, ssl
+
 
 import stripe 
 
 import hashlib
 
+import bcrypt
+from datetime import timedelta
 
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 
 import secrets, datetime
-import bcrypt
 
-import os, smtplib, ssl
+
+
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -37,6 +41,9 @@ CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173"]}},
 
 password = os.getenv("MySQL_Password")
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+app.secret_key = os.getenv("SIGN_SECRET_KEY")
+
+app.permanent_session_lifetime = timedelta(days=7)
 conn = None
 
 
@@ -170,7 +177,7 @@ def login():
 
 
         cursor.execute("""
-            SELECT PASSWORD FROM login_info WHERE Username = %s
+            SELECT PASSWORD, USERNAME FROM login_info WHERE Username = %s
         """, (data['username'],))
         row = cursor.fetchone()
         if row:
@@ -179,7 +186,14 @@ def login():
 
             is_valid = bcrypt.checkpw(data['password'].encode(), stored_hash.encode())
             print("Password Match:", is_valid)
-            return (is_valid)
+
+            if is_valid:
+                session.permanent = True
+                session['username'] = row[1]
+                return jsonify({"success": True})
+            else:
+                session.permanent = False
+                return jsonify({"success": False})
         else:
             print("Not found")
 
@@ -200,29 +214,111 @@ def get_session():
     if request.method == "OPTIONS":
         return '', 200
 
-    data = request.get_json()
+    username = session.get('username')
+
+    if username:
+        print("this was got", username)
+        return jsonify({"logged_in": True, "username": username}), 200
+    else:
+        print("no username")
+        return jsonify({"logged_in": False}), 401
+    
+@app.route("/api/logout", methods=["POST", "OPTIONS"])
+def logout():
+    if request.method == "OPTIONS":
+        return '', 200
+    session.clear()
+    return jsonify({"success": True}), 200
         
-    try:
-        conn = mysql.connector.connect(
-            host='mealswipe-backend-db.cupg6kqiyitn.us-east-1.rds.amazonaws.com',
-            port=3306,
-            database='dev',
-            user='admin',
-            password=password,
-            ssl_disabled=False,
-        ssl_ca='/certs/global-bundle.pem'
-        )
-        cursor = conn.cursor(dictionary=True)  # returns rows as dicts
-        cursor.execute("SELECT * FROM session")
-        rows = cursor.fetchall()
-        print(rows)
-        return jsonify(rows), 200
-    except Exception as e:
-        print(f"Database error: {e}")
-        raise
-    finally:
-        if conn:
-            conn.close()
+    
+
+
+# # ----------------------------
+# # STRIPE - SELLER ONBOARDING
+# # ----------------------------
+
+# @app.route("/api/connect", methods=["POST", "OPTIONS"])
+# def create_connect_account():
+#     if request.method == "OPTIONS":
+#         return '', 200
+
+#     data = request.get_json()
+#     user_id = data.get("user_id")
+
+#     account = stripe.Account.create(type="express")
+
+#     # TODO: save account.id to your DB linked to user_id
+#     # cursor.execute("UPDATE login_info SET stripe_account_id = %s WHERE Username = %s", (account.id, user_id))
+
+#     account_link = stripe.AccountLink.create(
+#         account=account.id,
+#         refresh_url="http://localhost:5173/seller/onboard",
+#         return_url="http://localhost:5173/seller/dashboard",
+#         type="account_onboarding",
+#     )
+
+#     return jsonify({"url": account_link.url})
+
+
+# # ----------------------------
+# # STRIPE - BUYER CHECKOUT
+# # ----------------------------
+
+# @app.route("/api/checkout", methods=["POST", "OPTIONS"])
+# def create_payment_intent():
+#     if request.method == "OPTIONS":
+#         return '', 200
+
+#     data = request.get_json()
+#     amount = data.get("amount")                              
+#     seller_stripe_account_id = data.get("seller_stripe_account_id")  # from your DB
+
+#     platform_fee = round(amount * 0.10)  # 10% platform fee
+
+#     intent = stripe.PaymentIntent.create(
+#         amount=amount,
+#         currency="usd",
+#         application_fee_amount=platform_fee,
+#         transfer_data={
+#             "destination": seller_stripe_account_id,
+#         },
+#     )
+
+#     return jsonify({"client_secret": intent.client_secret})
+
+
+# # ----------------------------
+# # STRIPE - WEBHOOKS
+# # ----------------------------
+
+# @app.route("/api/webhooks/stripe", methods=["POST"])
+# def stripe_webhook():
+#     payload = request.get_data(as_text=True)
+#     sig_header = request.headers.get("Stripe-Signature")
+
+#     try:
+#         event = stripe.Webhook.construct_event(
+#             payload, sig_header, os.getenv("STRIPE_WEBHOOK_SECRET")
+#         )
+#     except stripe.error.SignatureVerificationError:
+#         return jsonify({"error": "Invalid signature"}), 400
+
+#     event_type = event["type"]
+#     data = event["data"]["object"]
+
+#     if event_type == "payment_intent.succeeded":
+#         payment_intent_id = data["id"]
+#         amount = data["amount"]
+#         # TODO: mark order as paid in your DB
+#         print(f"Payment succeeded: {payment_intent_id} for ${amount / 100:.2f}")
+
+#     elif event_type == "account.updated":
+#         account_id = data["id"]
+#         if data.get("details_submitted"):
+#             # TODO: mark seller as verified in your DB
+#             print(f"Seller onboarded: {account_id}")
+
+#     return jsonify({"status": "ok"}), 200
 
 
 app.run(port=5000, debug=True)

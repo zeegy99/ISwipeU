@@ -20,15 +20,19 @@ function Signin() {
    
     const response = await fetch("http://localhost:5000/api/login", {
       method: "POST",
+      credentials: "include", 
       headers: {"Content-type": "application/json"},
       body: JSON.stringify({username, password})
     })
 
-    if (response.ok) {
-      console.log("yay")
-      return 
+    const data = await response.json();
+    if (data.success) {
+      navigate("/");
+
     }
-    return -1
+    else {
+      console.log("login failed")
+    }
   };
 
   return (

@@ -12,6 +12,19 @@ function Homepage() {
   const [index, setIndex] = useState(0);
   const navigate = useNavigate();
 
+  useEffect(() => {
+  const checkSession = async () => {
+    const res = await fetch("http://localhost:5000/api/session", {
+      credentials: "include",
+    });
+    const data = await res.json();
+    if (data.logged_in) {
+      console.log("username:", data.username);
+      setRole("admin"); // optional: auto-set role if logged in
+    }
+  };
+  checkSession();
+}, []);
   
 
   const add_waitlist = () => {
@@ -40,7 +53,7 @@ function Homepage() {
 
   const send_session = async () => {
     const response = await fetch("http://localhost:5000/api/session", {
-      method: "POST", 
+      method: "GET", 
       credentials: 'include',
       headers: { "Content-Type": "application/json" },
     })
@@ -48,7 +61,7 @@ function Homepage() {
     if (!response.ok) {
       throw new Error('Response Status: ', response.status)
     }
-    const data = await res.json();
+    const data = await response.json();
     console.log("yay")
     console.log(data)
     return -1
