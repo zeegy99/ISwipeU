@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import mysql.connector
 import boto3
 import os, smtplib, ssl
-
+import random 
 
 import stripe 
 
@@ -23,7 +23,6 @@ import secrets, datetime
 
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-
 
 
 
@@ -139,6 +138,8 @@ def get_waitlist():
     finally:
         cursor.close()
         conn.close()
+
+removed_users = {}
 @app.route("/api/take_off_waitlist", methods=["POST", "OPTIONS"])
 def take_off_waitlist():
     if request.method == "OPTIONS":
@@ -157,6 +158,13 @@ def take_off_waitlist():
         ssl_ca='/certs/global-bundle.pem'
         )
         cursor = conn.cursor()
+
+        cursor.execute("""SELECT Username FROM waitlist where id = %s""", (data.get("id"), ))
+        row = cursor.fetchone()
+        if row: 
+            code = random.randint(1000, 9999)
+            removed_users[row[0]] = {"code": code, "picked_up_by": data.get("picked_up_by")}
+            print("This is removed_users", removed_users)
         cursor.execute("DELETE FROM waitlist WHERE id = %s", (data.get("id"),))
         conn.commit()
         return jsonify({"success": True}), 200
@@ -165,6 +173,20 @@ def take_off_waitlist():
     finally:
         cursor.close()
         conn.close()
+
+
+@app.route("/api/check_removed", methods=["POST", "OPTIONS"])
+def check_removed():
+    if request.method == "OPTIONS":
+        return '', 200
+
+    data = request.get_json()
+    username = data.get("username")
+
+    if username in removed_users:
+        return jsonify({"removed": True}), 200
+    
+    return jsonify({"removed": False}), 200
 
 @app.route("/api/signup_info", methods=["POST", "OPTIONS"])
 def login_info():

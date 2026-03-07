@@ -1,81 +1,86 @@
-import { useState, react } from 'react'
+import { useState } from 'react'
 import './signin.css'
-import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 function Signin() {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-
+  const [error, setError] = useState(false);
   const navigate = useNavigate();
-
-  const send_login_info = async () => {
-    
-  }
-
 
   const handleSignin = async (e) => {
     e.preventDefault();
-   
+    setError(false);
+
     const response = await fetch("http://localhost:5000/api/login", {
       method: "POST",
-      credentials: "include", 
-      headers: {"Content-type": "application/json"},
-      body: JSON.stringify({username, password})
-    })
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    });
 
     const data = await response.json();
     if (data.success) {
       navigate("/");
-
-    }
-    else {
-      console.log("login failed")
+    } else {
+      setError(true);
     }
   };
 
   return (
-    <>
-      <div className="login-page">
-        <div className="login-card">
-      <h2 className="login-title">Log In</h2>
-      <form onSubmit={handleSignin} className="login-form">
-        <label className="login-label">Username</label>
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="login-input"
-          required
-        />
+    <div className="login-page">
+      <div className="login-card">
 
-        <label className="login-label">Password</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="login-input"
-          required
-        />
+        <p className="login-eyebrow">Welcome back</p>
+        <h2 className="login-title">Sign in to <span>MealSwipe</span></h2>
+        <p className="login-subtitle">Enter your credentials to continue.</p>
 
-        <button type="submit" className="login-button">
-          Log In
-        </button>
+        <form onSubmit={handleSignin} className="login-form">
 
-        <div className="login-link">
-          {/* <Link to="/forgot_password">Forgot Password?</Link> */}
+          <div className="login-field">
+            <label className="login-label">Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="login-input"
+              placeholder="your_username"
+              required
+            />
+          </div>
+
+          <div className="login-field">
+            <label className="login-label">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="login-input"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+
+          <div className={`error-container ${error ? "visible" : ""}`}>
+            <p className="error-text">Incorrect username or password.</p>
+          </div>
+
+          <button type="submit" className="login-button">
+            Sign In
+          </button>
+
+        </form>
+
+        <div className="login-divider"><span>or</span></div>
+
+        <div className="signup-link">
+          Don't have an account? <Link to="/signup">Sign Up</Link>
         </div>
-      </form>
 
-      <div className="signup-link">
-        Need an account? <Link to="/signup">Sign Up</Link>
       </div>
     </div>
-  </div>
-    </>
-    
-  )
+  );
 }
 
 export default Signin;

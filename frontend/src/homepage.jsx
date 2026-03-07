@@ -1,5 +1,4 @@
-
-import './App.css';
+import './Homepage.css';
 import Location from './location';
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -10,169 +9,169 @@ function Homepage() {
   const [waitlist, setWaitlist] = useState([]);
   const [role, setRole] = useState("guest");
   const [index, setIndex] = useState(0);
+  const [orderTaken, setOrderTaken] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-  const checkSession = async () => {
-    const res = await fetch("http://localhost:5000/api/session", {
+  if (orderTaken) {
+    console.log("order was taken")
+    navigate("/order-ready");  // redirect to a page
+    // or play a sound
+    // or show a toast notification
+    // or anything else
+  }
+}, [orderTaken]);
+  useEffect(() => {
+    const checkSession = async () => {
+      const res = await fetch("http://localhost:5000/api/session", {
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (data.logged_in) {
+        navigate("/swiper");
+      }
+    };
+    checkSession();
+  }, []);
+
+  useEffect(() => {
+  if (!name) return  // don't poll until we know the username
+
+  const interval = setInterval(async () => {
+    const res = await fetch("http://localhost:5000/api/check_removed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       credentials: "include",
+      body: JSON.stringify({ username: name })
     });
     const data = await res.json();
-    if (data.logged_in) {
-      navigate("\swiper")
-    }
-  };
-  checkSession();
-}, []);
-  
-  
+    if (data.removed) setOrderTaken(true);
+  }, 3000);
 
-  const add_waitlist = () => {
-    if (name === "") {
-      console.log("No name, returning -1")
-      return -1
-    }
-    setWaitlist([...waitlist, name])
-    send_waitlist()
-  }
+  return () => clearInterval(interval);
+}, [name]);  // re-runs when name is set after session check
+
+  const add_waitlist = async () => {
+    if (name === "") return -1;
+    await send_waitlist();
+  };
 
   const change_role = () => {
-    if (role == "guest") {
-      setRole("admin")
-    }
-    else {
-      setRole("guest")
-    }
-  }
+    setRole(role === "guest" ? "admin" : "guest");
+  };
 
   const sign_in = () => {
-    if (role == "guest") {
-      navigate("/signin")
-    }
-  }
-
-  const send_session = async () => {
-    const response = await fetch("http://localhost:5000/api/session", {
-      method: "GET", 
-      credentials: 'include',
-      headers: { "Content-Type": "application/json" },
-    })
-
-    if (!response.ok) {
-      throw new Error('Response Status: ', response.status)
-    }
-    const data = await response.json();
-    console.log("yay")
-    console.log(data)
-    return -1
-  }
-
-
-
-  const pickup_orders = async () => {
-    const response = await fetch("http://localhost:5000/api/get_order", {
-      method: "POST", 
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({"Index": index})
-    })
-
-    if (!response.ok) {
-      throw new Error('Response Status: ', response.status)
-    }
-
-    const data = await response.text()
-    console.log(data)
-  }
+    if (role === "guest") navigate("/signin");
+  };
 
   const send_waitlist = async () => {
     const response = await fetch("http://localhost:5000/api/waitlist", {
-      method: "POST", 
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(name)
-    })
-
-    if (!response.ok) {
-      throw new Error('Response Status: ', response.status)
-    }
-
-    const data = await response.text()
-    console.log(data)
-  }
+      body: JSON.stringify({ username: name, email: "" }),
+    });
+    if (!response.ok) throw new Error("Response Status: " + response.status);
+    const res = await fetch("http://localhost:5000/api/get_waitlist", { credentials: "include" });
+    const data = await res.json();
+    setWaitlist(data);
+  };
 
   const take_off_waitlist = async () => {
-    if (index >= waitlist.length) {
-      console.log("Invalid Index")
-      return -1 
-    }
-    const response = await fetch("http://localhost:5000/api/take_off_waitlist", {
-      method: "POST", 
+    if (index >= waitlist.length) return -1;
+    const entry = waitlist[index];
+    await fetch("http://localhost:5000/api/take_off_waitlist", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(index)
-    })
-
-    if (!response.ok) {
-      throw new Error('Response Status: ', response.status)
-    }
-
-    const data = await response.json()
-    console.log(data)
-    console.log(typeof(data))
-    // console.log(typeof(data.json()))
-    setWaitlist(data)
-  }
+      body: JSON.stringify({ id: entry.id }),
+    });
+    const res = await fetch("http://localhost:5000/api/get_waitlist", { credentials: "include" });
+    const data = await res.json();
+    setWaitlist(data);
+  };
 
   const test_backend = async () => {
-    const response = await fetch ("http://localhost:5000/api/asdf")
-    const data = await response.text()
-    console.log(data)
-  }
-
-  const send_location = async () => {
-
-  }
-
-
- 
-
+    const response = await fetch("http://localhost:5000/api/asdf");
+    const data = await response.text();
+    console.log(data);
+  };
 
   return (
-    <>
-     
+    <div className="homepage">
 
-    <button onClick={sign_in}> Sign in </button>
-    <label>
-       Your Name:  
-      <input 
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-    </label>
-      
-      <button onClick={add_waitlist}> Put me on the Forest waitlist </button>
-      <button onClick={change_role}> Become Admin </button>
+      {/* Header */}
+      <header className="homepage__header">
+        <span className="homepage__logo">MealSwipe</span>
+        <button className="btn-signin" onClick={sign_in}>Sign in</button>
+      </header>
 
-      <p> You are currently logged in as: {role} </p>
-      {role === "admin" && (
-        <>
-        <label>
-          The Index 
+      {/* Hero */}
+      <div className="homepage__hero">
+        <p className="homepage__eyebrow">Now accepting</p>
+        <h1 className="homepage__title">Join the <span>Forest</span><br />Waitlist</h1>
+        <p className="homepage__subtitle">Reserve your spot and be the first to know when we're ready for you.</p>
+      </div>
+
+      {/* Signup card */}
+      <div className="homepage__card">
+        <p className="homepage__card-title">Add yourself</p>
+        <div className="input-group">
+          <label>Your name</label>
           <input
-            value={index}
-            onChange={(e) => setIndex(e.target.value)}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Enter your name"
           />
-        </label>
-        <button onClick={take_off_waitlist}> Pickup Orders</button>
-        <button onClick={test_backend}> Test </button>
-        <button onClick={send_location}> Send Location</button>
-        <button onClick={send_session}> Session</button>
-        <Location/>
-        </>
-      )
-      }
-      <p> Current Waitlist: {waitlist.join(", ")} </p>
-    </>
-    
-  )
+        </div>
+        <button className="btn-primary" onClick={add_waitlist}>
+          Put me on the waitlist
+        </button>
+        <button className="btn-secondary" onClick={change_role}>
+          {role === "guest" ? "Switch to Admin view" : "Switch to Guest view"}
+        </button>
+      </div>
+
+      {/* Role badge */}
+      <div className={`role-badge ${role === "admin" ? "admin" : ""}`}>
+        {role}
+      </div>
+
+      {/* Admin panel */}
+      {role === "admin" && (
+        <div className="admin-panel">
+          <p className="admin-panel__title">Admin Controls</p>
+          <div className="input-group">
+            <label>Waitlist index to remove</label>
+            <input
+              value={index}
+              onChange={(e) => setIndex(e.target.value)}
+              placeholder="0"
+            />
+          </div>
+          <button className="btn-primary" onClick={take_off_waitlist}>Remove from waitlist</button>
+          <button className="btn-danger" onClick={test_backend}>Test Backend</button>
+          <Location />
+        </div>
+      )}
+
+      {/* Waitlist display */}
+      <div className="waitlist-display">
+        <p className="waitlist-display__label">Current Waitlist</p>
+        {waitlist.length === 0 ? (
+          <p className="waitlist-display__empty">No one on the waitlist yet.</p>
+        ) : (
+          <div className="waitlist-items">
+            {waitlist.map((w, i) => (
+              <div className="waitlist-item" key={w.id}>
+                <span className="waitlist-item__num">#{i + 1}</span>
+                <span className="waitlist-item__name">{w.Username}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+    </div>
+  );
 }
 
-export default Homepage
+export default Homepage;
