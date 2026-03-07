@@ -23,7 +23,7 @@ function App() {
           <Route path="signin" element={<Signin/>}/>
           <Route path="signup" element={<Signup/>}/>
           <Route path="swiper" element={<Swiper/>}/>
-          <Route path="order-ready" element={<Pickup/>}/>
+          <Route path="order_ready" element={<Pickup/>}/>
         </Routes>
       </Router>
     </>

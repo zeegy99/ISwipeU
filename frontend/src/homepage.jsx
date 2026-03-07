@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 function Homepage() {
-
+  const [orderInfo, setOrderInfo] = useState(null);
   const [name, setName] = useState("");
   const [waitlist, setWaitlist] = useState([]);
   const [role, setRole] = useState("guest");
@@ -15,10 +15,7 @@ function Homepage() {
   useEffect(() => {
   if (orderTaken) {
     console.log("order was taken")
-    navigate("/order-ready");  // redirect to a page
-    // or play a sound
-    // or show a toast notification
-    // or anything else
+    
   }
 }, [orderTaken]);
   useEffect(() => {
@@ -45,7 +42,10 @@ function Homepage() {
       body: JSON.stringify({ username: name })
     });
     const data = await res.json();
-    if (data.removed) setOrderTaken(true);
+    if (data.removed) {
+      setOrderInfo({ code: data.code, picked_up_by: data.picked_up_by });
+      setOrderTaken(true);
+    }
   }, 3000);
 
   return () => clearInterval(interval);
@@ -95,7 +95,32 @@ function Homepage() {
     console.log(data);
   };
 
+  if (orderTaken) {
+    return (
+        <div className="homepage">
+            <header className="homepage__header">
+                <span className="homepage__logo">MealSwipe</span>
+            </header>
+            <div className="homepage__hero">
+                <p className="homepage__eyebrow">It's your turn!</p>
+                <h1 className="homepage__title">Picked up by <span>{orderInfo?.picked_up_by}</span></h1>
+                <p className="homepage__subtitle">Show this code to confirm your order</p>
+                <h2 style={{ 
+                    fontSize: "4rem", 
+                    color: "var(--accent)", 
+                    letterSpacing: "0.3em",
+                    marginTop: "24px",
+                    fontFamily: "Playfair Display, serif"
+                }}>
+                    {orderInfo?.code}
+                </h2>
+            </div>
+        </div>
+    );
+}
+
   return (
+    
     <div className="homepage">
 
       {/* Header */}

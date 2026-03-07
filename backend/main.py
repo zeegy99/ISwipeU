@@ -184,7 +184,9 @@ def check_removed():
     username = data.get("username")
 
     if username in removed_users:
-        return jsonify({"removed": True}), 200
+        return jsonify({"removed": True,
+                        "code": removed_users[username]['code'],
+                        "picked_up_by": removed_users[username]['picked_up_by']}), 200
     
     return jsonify({"removed": False}), 200
 
