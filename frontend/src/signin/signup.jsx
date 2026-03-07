@@ -32,6 +32,10 @@ const Signup = () => {
 
     if (response.ok) {
       console.log("We are ok")
+
+      console.log("adding an entry")
+      navigate("/signin")
+
       return 
     }
     else {

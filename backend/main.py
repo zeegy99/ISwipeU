@@ -137,11 +137,12 @@ def login_info():
         cursor.execute("INSERT INTO login_info (Username, Email, PASSWORD) VALUES "
         "(%s, %s, %s)", (data.get("username"), data.get("email"), hash_function(data.get("password"))))
 
+                
+        cursor.execute(
+            "INSERT INTO user_roles (Username, Role) VALUES (%s, 'guest')",
+            (data.get("username"),)
+        )
 
-        cursor.execute("SELECT * FROM login_info")
-        rows = cursor.fetchall()
-        for row in rows:
-            print(row)
 
         conn.commit()
 
@@ -223,14 +224,74 @@ def get_session():
         print("no username")
         return jsonify({"logged_in": False}), 401
     
+
 @app.route("/api/logout", methods=["POST", "OPTIONS"])
 def logout():
     if request.method == "OPTIONS":
         return '', 200
+     
     session.clear()
     return jsonify({"success": True}), 200
-        
     
+
+@app.route("/api/find_role", methods=["POST", "OPTIONS"])
+def find_role():
+    if request.method == "OPTIONS":
+        return '', 200
+    
+    
+    data = request.get_json()
+    # print("this is data")    
+    conn = mysql.connector.connect(
+        host='mealswipe-backend-db.cupg6kqiyitn.us-east-1.rds.amazonaws.com',
+        port=3306,
+        database='dev',
+        user='admin',
+        password=password,
+        ssl_disabled=False,
+    ssl_ca='/certs/global-bundle.pem'
+    )
+    cursor = conn.cursor()
+
+    cursor.execute("""SELECT Role from user_roles where Username like %s""", (data['username'],))
+    row = cursor.fetchone()
+
+    if row:
+        print(row)
+        return "good"
+    else:
+        print('nothing found')
+        return "none"
+
+
+@app.route("/api/change_role", methods=["POST", "OPTIONS"])
+def change_role():
+    if request.method == "OPTIONS":
+        return '', 200
+    
+    
+    data = request.get_json()
+        
+    conn = mysql.connector.connect(
+        host='mealswipe-backend-db.cupg6kqiyitn.us-east-1.rds.amazonaws.com',
+        port=3306,
+        database='dev',
+        user='admin',
+        password=password,
+        ssl_disabled=False,
+    ssl_ca='/certs/global-bundle.pem'
+    )
+    cursor = conn.cursor()
+
+    cursor.execute("""UPDATE user_roles
+                   SET Role = %s where Username like %s""", (data['Role'], data['Username'], ))
+    
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+    return 
+
 
 
 # # ----------------------------

@@ -4,7 +4,7 @@ import Location from './location';
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-function Homepage() {
+function Swiping() {
 
   const [name, setName] = useState("");
   const [waitlist, setWaitlist] = useState([]);
@@ -19,7 +19,8 @@ function Homepage() {
     });
     const data = await res.json();
     if (data.logged_in) {
-      navigate("\swiper")
+      console.log("username:", data.username);
+      setName(data.username); 
     }
   };
   checkSession();
@@ -45,10 +46,16 @@ function Homepage() {
     }
   }
 
-  const sign_in = () => {
-    if (role == "guest") {
-      navigate("/signin")
-    }
+  const sign_out = async () => {
+    const response = await fetch("http://localhost:5000/api/logout", {
+      method: "POST", 
+      credentials: "include",
+    })
+
+    setName("");
+    setRole("guest")
+
+    navigate("/")
   }
 
   const send_session = async () => {
@@ -139,7 +146,7 @@ function Homepage() {
     <>
      
 
-    <button onClick={sign_in}> Sign in </button>
+    <button onClick={sign_out}> Sign out </button>
     <label>
        Your Name:  
       <input 
@@ -175,4 +182,4 @@ function Homepage() {
   )
 }
 
-export default Homepage
+export default Swiping
