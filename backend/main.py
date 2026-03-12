@@ -25,6 +25,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 
+pickup_history = {}
 
 print("at the start of the main backend")
 load_dotenv()
@@ -161,10 +162,21 @@ def take_off_waitlist():
 
         cursor.execute("""SELECT Username FROM waitlist where id = %s""", (data.get("id"), ))
         row = cursor.fetchone()
-        if row: 
+        if row:
+            username = row[0]  # define username first
             code = random.randint(1000, 9999)
-            removed_users[row[0]] = {"code": code, "picked_up_by": data.get("picked_up_by")}
-            print("This is removed_users", removed_users)
+            picked_up_by = data.get("picked_up_by")
+            removed_users[username] = {"code": code, "picked_up_by": picked_up_by}
+            
+            # add to pickup history
+            if picked_up_by not in pickup_history:
+                pickup_history[picked_up_by] = []
+            pickup_history[picked_up_by].append({
+                "username": username,
+                "code": code,
+                "verified": False,
+                "time": datetime.datetime.now().strftime("%H:%M")
+            })
         cursor.execute("DELETE FROM waitlist WHERE id = %s", (data.get("id"),))
         conn.commit()
         return jsonify({"success": True}), 200
@@ -370,8 +382,43 @@ def change_role():
 
     cursor.close()
     conn.close()
-    return 
+    return jsonify({"success": True}), 200 
 
+@app.route("/api/get_pickup_history", methods=["POST", "OPTIONS"])
+def pickup_historys():
+    if request.method == "OPTIONS":
+        return '', 200
+    
+    data = request.get_json()
+    swiper = data.get("swiper")
+    history = pickup_history.get(swiper, [])
+    return jsonify(history), 200
+
+@app.route("/api/check_code", methods=["POST", "OPTIONS"])
+def check_code():
+    if request.method == 'OPTIONS':
+        return '',200
+    
+    data = request.get_json()
+    swiper = data.get("swiper")
+    username = data.get('username')
+    entered_code = int(data.get('code'))
+    
+    history = pickup_history.get(swiper, [])
+
+    print("this is what history is", history)
+    print("this is username", username)
+    print(type(username))
+    for order in history:
+        print("this is what order is", order)
+        print(order['username'] == str(username))
+        print(entered_code == order['code'])
+        if order['username'] == str(username) and entered_code == order['code']:
+            order['Verified'] = True
+            return jsonify({"success": True}), 200
+        
+    return jsonify({"success": False, "error": "Code doesn't match"}), 400
+    
 
 
 # # ----------------------------

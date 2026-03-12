@@ -10,6 +10,22 @@ function Swiper() {
   const [role, setRole] = useState("guest");
   const navigate = useNavigate();
 
+  const [history, setHistory] = useState([]);
+  const [verifyInputs, setVerifyInputs] = useState({});
+  const [showHistory, setShowHistory] = useState(false);
+
+  const fetch_history = async () => {
+    const res = await fetch("http://localhost:5000/api/get_pickup_history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ swiper: name })
+    });
+    const data = await res.json();
+    setHistory(data);
+    setShowHistory(true);
+};
+
   useEffect(() => {
     const checkSession = async () => {
       const res = await fetch("http://localhost:5000/api/session", { credentials: "include" });
@@ -28,8 +44,30 @@ function Swiper() {
 
     const interval = setInterval(fetchWaitlist, 5000);
 
+    
+
     return () => clearInterval(interval);
   }, []);
+
+  const verify_code = async (username) => {
+    const res = await fetch("http://localhost:5000/api/check_code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+            swiper: name,
+            username,
+            code: verifyInputs[username]
+        })
+    });
+    const data = await res.json();
+    if (data.success) {
+        // refresh history to show verified
+        fetch_history();
+    } else {
+        alert("Wrong code!");
+    }
+};
 
   const add_waitlist = async () => {
     if (name === "") return;
@@ -58,7 +96,7 @@ function Swiper() {
     setWaitlist(data);
   };
 
-  // Takes the DB id directly — no index needed
+  
   const take_order = async (id) => {
     await fetch("http://localhost:5000/api/take_off_waitlist", {
       method: "POST",
@@ -144,6 +182,61 @@ function Swiper() {
             }>Check Session</button>
           </div>
           <Location />
+
+          <button className="btn-ghost" onClick={fetch_history}>View My Pickups</button>
+
+{showHistory && (
+    <div style={{ marginTop: "20px" }}>
+        <p className="admin-panel__title">Your Pickups</p>
+        {history.length === 0 ? (
+            <p style={{ color: "var(--text-muted)", fontSize: "0.88rem" }}>No pickups yet.</p>
+        ) : (
+            history.map((order, i) => (
+                <div key={i} style={{
+                    background: "var(--surface2)",
+                    border: `1px solid ${order.verified ? "var(--green)" : "var(--border)"}`,
+                    borderRadius: "8px",
+                    padding: "12px 16px",
+                    marginBottom: "10px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px"
+                }}>
+                    <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: "0.9rem", color: "var(--text)" }}>{order.username}</p>
+                        <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{order.time}</p>
+                    </div>
+                    {order.verified ? (
+                        <span style={{ color: "var(--green-light)", fontSize: "0.8rem", fontWeight: 600 }}>✓ Verified</span>
+                    ) : (
+                        <>
+                            <input
+                                placeholder="Enter code"
+                                value={verifyInputs[order.username] || ""}
+                                onChange={(e) => setVerifyInputs(prev => ({
+                                    ...prev,
+                                    [order.username]: e.target.value
+                                }))}
+                                style={{
+                                    background: "var(--surface)",
+                                    border: "1px solid var(--border)",
+                                    borderRadius: "6px",
+                                    padding: "6px 10px",
+                                    color: "var(--text)",
+                                    width: "100px",
+                                    fontSize: "0.85rem"
+                                }}
+                            />
+                            <button className="btn-take-order" onClick={() => verify_code(order.username)}>
+                                Verify
+                            </button>
+                        </>
+                    )}
+                </div>
+            ))
+        )}
+    </div>
+)}
         </div>
       )}
 
