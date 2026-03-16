@@ -408,16 +408,20 @@ def check_code():
 
     print("this is what history is", history)
     print("this is username", username)
-    print(type(username))
     for order in history:
         print("this is what order is", order)
         print(order['username'] == str(username))
         print(entered_code == order['code'])
         if order['username'] == str(username) and entered_code == order['code']:
-            order['Verified'] = True
+            order['verified'] = True
+            print("yay it matched, this is the new order", order)
             return jsonify({"success": True}), 200
         
     return jsonify({"success": False, "error": "Code doesn't match"}), 400
+
+
+# @app.route("/api/check_code", methods=["POST", "OPTIONS"])
+# def check_code():
     
 
 
@@ -509,4 +513,5 @@ def check_code():
 #     return jsonify({"status": "ok"}), 200
 
 
-app.run(port=5000, debug=True)
+if __name__ == '__main__':
+    app.run(port=5000, debug=True)
